@@ -37,7 +37,22 @@ app.event("channel_created", async ({ event, client }) => {
     } 
 });
 
-
+app.event("channel_left", async ({ event, client }) => {
+  try {
+    const channelID = event.channel;
+    const user = event.actor_id;
+    console.log(
+      `User <@${user}> removed Firehose from <#${channelID}>, rejoining!`,
+    );
+    app.client.chat.postMessage({
+      channel: process.env.MIRRORCHANNEL,
+      text: `User </@${user}> removed Firehose from <#${channelID}>, rejoining!`,
+    });
+    await client.conversations.join({ channel: channelID });
+  } catch (e) {
+    console.log(e);
+  }
+});
 
 app.event('message', async (args) => {
     // begin the firehose
