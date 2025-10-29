@@ -30,7 +30,7 @@ async function shushBan(args) {
     if (isAdmin) {
       await client.chat.postMessage({
         channel: process.env.MIRRORCHANNEL,
-        text: `<@${user_id}> banned <@${userToBan}> from all Slack channels. ${reason ? `for ${reason}` : ""}`,
+        text: `<@${user_id}> shushed <@${userToBan}> from all Slack channels. ${reason ? `for ${reason}` : ""}`,
       });
     }
 
@@ -62,7 +62,7 @@ async function shushBan(args) {
       await client.chat.postEphemeral({
         channel: channel_id,
         user: user_id,
-        text: `<@${userToBan}> has been banned from all channels for ${reason}`,
+        text: `<@${userToBan}> has been shushed from all channels for ${reason}`,
         mrkdwn: true,
       });
     }
