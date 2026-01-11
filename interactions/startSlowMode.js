@@ -21,14 +21,19 @@ async function startSlowMode(args) {
     if (!getSlowmode) return;
 
     if (getSlowmode.expiresAt && new Date() > getSlowmode.expiresAt) {
-        await prisma.Slowmode.update({
-            where: {
-                id: getSlowmode.id
-            },
-            data: {
-                locked: false
-            }
-        });
+        await Promise.all([
+            prisma.Slowmode.update({
+                where: {
+                    id: getSlowmode.id
+                },
+                data: {
+                    locked: false
+                }
+            }),
+            prisma.SlowUsers.deleteMany({
+                where: { channel: channel }
+            })
+        ]);
 
         await client.chat.postMessage({
             channel: process.env.MIRRORCHANNEL,
@@ -41,7 +46,8 @@ async function startSlowMode(args) {
     const userInfo = await client.users.info({ user: user });
     const isManager = (await getChannelManagers(channel)).includes(user);
     const isAdmin = userInfo.user.is_admin;
-    const isExempt = isAdmin || isManager;
+    const isWhitelisted = getSlowmode.whitelistedUsers?.includes(user) || false;
+    const isExempt = isAdmin || isManager || isWhitelisted;
     if (isExempt) return;
 
     const userData = await prisma.SlowUsers.findFirst({
@@ -68,8 +74,6 @@ async function startSlowMode(args) {
 
     if (timeSinceLastMessage < getSlowmode.time) {
         const timeRemaining = Math.ceil(getSlowmode.time - timeSinceLastMessage);
-
-        // TODO: add whitelisted users to slowmode
         try {
             await client.chat.delete({
                 channel: channel,

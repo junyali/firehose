@@ -13,19 +13,27 @@ async function slowmode_modal(args) {
         const slowmodeTime = parseInt(submittedValues.slowmode_time_block.slowmode_time_input.value);
         const slowmodeDuration = submittedValues.slowmode_duration_block.slowmode_duration_input.selected_date_time;
         const reason = submittedValues.slowmode_reason_block.slowmode_reason_input.value || "";
+        const whitelistedUsers = submittedValues.slowmode_whitelist_block.slowmode_whitelist_input.selected_users || [];
+        const errors = {};
 
         let expiresAt = null;
         if (slowmodeDuration) {
             expiresAt = new Date(slowmodeDuration * 1000);
             if (expiresAt <= new Date()) {
-                return await ack({
-                    response_action: "errors",
-                    errors: {
-                        slowmode_duration_block: "Time cannot be in the past"
-                    }
-                });
+                errors.slowmode_duration_block = "Time cannot be in the past.";
             }
         }
+        if (slowmodeTime < 1) {
+            errors.slowmode_time_block = "Invalid slowmode interval";
+        }
+
+        if (Object.keys(errors).length > 0) {
+            return await ack({
+                response_action: "errors",
+                errors: errors
+            });
+        }
+
         await ack();
 
         const slowmode = await prisma.Slowmode.upsert({
@@ -38,7 +46,8 @@ async function slowmode_modal(args) {
                 time: slowmodeTime,
                 expiresAt: expiresAt,
                 reason: reason,
-                admin: admin_id
+                admin: admin_id,
+                whitelistedUsers: whitelistedUsers
             },
             update: {
                 locked: true,
@@ -46,9 +55,53 @@ async function slowmode_modal(args) {
                 expiresAt: expiresAt,
                 reason: reason,
                 admin: admin_id,
+                whitelistedUsers: whitelistedUsers,
                 updatedAt: new Date()
             }
         });
+
+        for (const userId of whitelistedUsers) {
+            await prisma.SlowUsers.upsert({
+                where: {
+                    channel_user: {
+                        channel: channel_id,
+                        user: userId
+                    }
+                },
+                create: {
+                    channel: channel_id,
+                    user: userId,
+                    whitelist: true,
+                    count: 0
+                },
+                update: {
+                    whitelist: true,
+                }
+            });
+        }
+
+        const allWhitelistedSlowUsers = await prisma.SlowUsers.findMany({
+            where: {
+                channel: channel_id,
+                whitelist: true
+            }
+        });
+
+        for (const slowUser of allWhitelistedSlowUsers) {
+            if (!whitelistedUsers.includes(slowUser.user)) {
+                await prisma.SlowUsers.update({
+                    where: {
+                        channel_user: {
+                            channel: channel_id,
+                            user: slowUser.user
+                        }
+                    },
+                    data: {
+                        whitelist: false
+                    }
+                });
+            }
+        }
 
         const expiryText = expiresAt
             ? `until ${expiresAt.toLocaleString('en-US', { timeZone: 'America/New_York', timeStyle: "short", dateStyle: "long" })} EST`
@@ -67,7 +120,6 @@ async function slowmode_modal(args) {
         });
     } catch(e) {
         console.error(e);
-        await ack();
     }
 }
 

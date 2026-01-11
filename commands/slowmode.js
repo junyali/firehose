@@ -33,6 +33,15 @@ async function slowmode(args) {
         where: { channel: channel }
     });
 
+    // TODO: Slowmode for specific threads similar to threadlocker
+
+    const isUpdate = existingSlowmode && existingSlowmode.locked;
+    const defaultTime = existingSlowmode?.time?.toString() || 5;
+    const defaultExpiry = existingSlowmode?.expiresAt
+        ? Math.floor(existingSlowmode.expiresAt.getTime() / 1000)
+        : null;
+    const defaultWhitelist = existingSlowmode?.whitelistedUsers || [];
+
     // using a modal-based approach similar to definite threadlocker
     const slowmodeModal = {
         type: "modal",
@@ -44,11 +53,11 @@ async function slowmode(args) {
         }),
         title: {
             type: "plain_text",
-            text: "Configure Slowmode"
+            text: isUpdate ? "Update Slowmode" : "Configure Slowmode"
         },
         submit: {
             type: "plain_text",
-            text: "Update"
+            text: "Enable"
         },
         close: {
             type: "plain_text",
@@ -69,7 +78,7 @@ async function slowmode(args) {
                     type: "number_input",
                     is_decimal_allowed: false,
                     action_id: "slowmode_time_input",
-                    initial_value: "5",
+                    initial_value: defaultTime,
                     min_value: "1"
                 },
                 label: {
@@ -87,7 +96,8 @@ async function slowmode(args) {
                 optional: true,
                 element: {
                     type: "datetimepicker",
-                    action_id: "slowmode_duration_input"
+                    action_id: "slowmode_duration_input",
+                    initial_date_time: defaultExpiry
                 },
                 label: {
                     type: "plain_text",
@@ -117,6 +127,35 @@ async function slowmode(args) {
                 }
             },
             {
+                type: "input",
+                block_id: "slowmode_whitelist_block",
+                optional: true,
+                element: defaultWhitelist.length > 0 ? {
+                    type: "multi_users_select",
+                    action_id: "slowmode_whitelist_input",
+                    initial_users: defaultWhitelist,
+                    placeholder: {
+                        type: "plain_text",
+                        text: "Select users (admins and channel managers are exempt by default)"
+                    }
+                } : {
+                    type: "multi_users_select",
+                    action_id: "slowmode_whitelist_input",
+                    placeholder: {
+                        type: "plain_text",
+                        text: "Select users (admins and channel managers are exempt by default)"
+                    }
+                },
+                label: {
+                    type: "plain_text",
+                    text: "Whitelisted users"
+                },
+                hint: {
+                    type: "plain_text",
+                    text: "These users will be immune to slowmode"
+                }
+            },
+            {
                 type: "actions",
                 block_id: "slowmode_disable_block",
                 elements: [
@@ -139,8 +178,6 @@ async function slowmode(args) {
         trigger_id: payload.trigger_id,
         view: slowmodeModal
     })
-
-    // TODO: cancel slowmode
-    }
+}
 
 module.exports = slowmode;
