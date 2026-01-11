@@ -4,7 +4,6 @@ require("dotenv").config();
 
 
 async function startSlowMode(args) {
-    // TODO: update code to be compatible with modal approach
     const { client, payload } = args
     const { user, ts, text, channel, subtype } = payload
 
@@ -20,6 +19,24 @@ async function startSlowMode(args) {
     });
 
     if (!getSlowmode) return;
+
+    if (getSlowmode.expiresAt && new Date() > getSlowmode.expiresAt) {
+        await prisma.Slowmode.update({
+            where: {
+                id: getSlowmode.id
+            },
+            data: {
+                locked: false
+            }
+        });
+
+        await client.chat.postMessage({
+            channel: process.env.MIRRORCHANNEL,
+            text: `Slowmode auto-disabled in <#${channel}> (expired)`
+        });
+
+        return;
+    }
 
     const userInfo = await client.users.info({ user: user });
     const isManager = (await getChannelManagers(channel)).includes(user);
@@ -52,6 +69,7 @@ async function startSlowMode(args) {
     if (timeSinceLastMessage < getSlowmode.time) {
         const timeRemaining = Math.ceil(getSlowmode.time - timeSinceLastMessage);
 
+        // TODO: add whitelisted users to slowmode
         try {
             await client.chat.delete({
                 channel: channel,
@@ -65,7 +83,7 @@ async function startSlowMode(args) {
         await client.chat.postEphemeral({
             channel: channel,
             user: user,
-            text: `Slowmode active: you can send another message in ${timeRemaining} seconds.\n\nYour message was:\n ${text}`
+            text: `Slowmode active: you can send another message in ${timeRemaining} seconds.\n\nYour message was:\n${text}`
         });
     } else {
         await prisma.SlowUsers.upsert({

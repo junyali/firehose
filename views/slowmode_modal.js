@@ -28,18 +28,28 @@ async function slowmode_modal(args) {
         }
         await ack();
 
-        await prisma.Slowmode.create({
-            data: {
+        const slowmode = await prisma.Slowmode.upsert({
+            where: {
+                channel: channel_id
+            },
+            create: {
                 channel: channel_id,
                 locked: true,
                 time: slowmodeTime,
                 expiresAt: expiresAt,
                 reason: reason,
                 admin: admin_id
+            },
+            update: {
+                locked: true,
+                time: slowmodeTime,
+                expiresAt: expiresAt,
+                reason: reason,
+                admin: admin_id,
+                updatedAt: new Date()
             }
         });
 
-        // TODO: update current slowmode
         // TODO: cancel slowmode
 
         const expiryText = expiresAt
