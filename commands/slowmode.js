@@ -91,11 +91,11 @@ async function slowmode(args) {
                 },
                 label: {
                     type: "plain_text",
-                    text: "Slowmode until (optional)"
+                    text: "Slowmode until"
                 },
                 hint: {
                     type: "plain_text",
-                    text: "Levae blank for indefinite"
+                    text: "Leave blank for indefinite"
                 }
             },
             {
@@ -113,7 +113,7 @@ async function slowmode(args) {
                 },
                 label: {
                     type: "plain_text",
-                    text: "reason"
+                    text: "Reason"
                 }
             },
             {

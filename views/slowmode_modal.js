@@ -7,7 +7,7 @@ async function slowmode_modal(args) {
 
     try {
         const view = body.view;
-        const metadata = JSON.parse(view.privateMetaData);
+        const metadata = JSON.parse(view.private_metadata);
         const { channel_id, admin_id, command_channel } = metadata;
         const submittedValues = view.state.values;
         const slowmodeTime = parseInt(submittedValues.slowmode_time_block.slowmode_time_input.value);
@@ -46,11 +46,11 @@ async function slowmode_modal(args) {
             ? `until ${expiresAt.toLocaleString('en-US', { timeZone: 'America/New_York', timeStyle: "short", dateStyle: "long" })} EST`
             : "indefinitely"
 
-        const reasonText = reason ? `\nReason: ${reason}` : "(none provided)";
+        const reasonText = reason ? `${reason}` : "(none provided)";
 
         await client.chat.postMessage({
             channel: process.env.MIRRORCHANNEL,
-            text: `<@${admin_id}> enabled a ${slowmodeTime} second Slowmode in <#${channel_id}> for {reasonText} until ${expiryText}`
+            text: `<@${admin_id}> enabled a ${slowmodeTime} second Slowmode in <#${channel_id}> for ${reasonText} until ${expiryText}`
         });
 
         await client.chat.postMessage({
