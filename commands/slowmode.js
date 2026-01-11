@@ -11,7 +11,6 @@ async function slowmode(args) {
     const userInfo = await client.users.info({ user: user_id });
     const isAdmin = userInfo.user.is_admin;
     const channelManagers = await getChannelManagers(channel_id);
-    const time = Number(commands[commands[0] && commands[0].includes('#') ? 1: 0])
 
     let channel = channel_id;
     if (commands[0] && commands[0].includes('#')) {
@@ -19,9 +18,9 @@ async function slowmode(args) {
     }
 
     const errors = []
-    if (!isAdmin && !channelManagers.includes(user_id)) errors.push("Only admins can run this command.");
+    // editor's note: i don't think it would be appropriate allowing channel managers to enable slowmode (for now...) - up to discussion.
+    if (!isAdmin) errors.push("Only admins can run this command.");
     if (!channel) errors.push("You need to give a channel to make it read only");
-    if (!time) errors.push("You need to specify a valid time in seconds");
 
     if (errors.length > 0)
         return await client.chat.postEphemeral({
@@ -34,53 +33,112 @@ async function slowmode(args) {
         where: { channel: channel }
     });
 
-    try {
-        if (existingSlowmode) {
-            if (time === 0) {
-                await prisma.Slowmode.delete({
-                    where: {id: existingSlowmode.id},
-                });
-
-                await client.chat.postMessage({
-                    channel: process.env.MIRRORCHANNEL,
-                    text: `<@${user_id}> turned off slowmode in <#${channel}>`
-                });
-                await client.chat.postMessage({
-                    channel: channel,
-                    user: user_id,
-                    text: `Slowmode has been enabled - ${time.toString()} second wait between each message`
-                });
-            } else {
-                await prisma.Slowmode.update({
-                    where: {id: existingSlowmode.id},
-                    data: {
-                        locked: true,
-                        time: time,
-                    }
-                });
-            }
-        } else {
-            await prisma.Slowmode.create({
-                data: {
-                    channel: channel,
-                    locked: true,
-                    time: time,
+    // using a modal-based approach similar to definite threadlocker
+    const slowmodeModal = {
+        type: "modal",
+        callback_id: "slowmode_modal",
+        private_metadata: JSON.stringify({
+            channel_id: channel,
+            admin_id: user_id,
+            command_channel: channel_id
+        }),
+        title: {
+            type: "plain_text",
+            text: "Configure Slowmode"
+        },
+        submit: {
+            type: "plain_text",
+            text: "Update"
+        },
+        close: {
+            type: "plain_text",
+            text: "Cancel"
+        },
+        blocks: [
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `Configure slowmode for <#${channel}>`
                 }
-            });
+            },
+            {
+                type: "input",
+                block_id: "slowmode_time_block",
+                element: {
+                    type: "number_input",
+                    is_decimal_allowed: false,
+                    action_id: "slowmode_time_input",
+                    initial_value: "5",
+                    min_value: "1"
+                },
+                label: {
+                    type: "plain_text",
+                    text: "Slowmode interval (seconds)"
+                },
+                hint: {
+                    type: "plain_text",
+                    text: "Users can send one message every X seconds"
+                }
+            },
+            {
+                type: "input",
+                block_id: "slowmode_duration_block",
+                optional: true,
+                element: {
+                    type: "datetimepicker",
+                    action_id: "slowmode_duration_input"
+                },
+                label: {
+                    type: "plain_text",
+                    text: "Slowmode until (optional)"
+                },
+                hint: {
+                    type: "plain_text",
+                    text: "Levae blank for indefinite"
+                }
+            },
+            {
+                type: "input",
+                block_id: "slowmode_reason_block",
+                optional: true,
+                element: {
+                    type: "plain_text_input",
+                    action_id: "slowmode_reason_input",
+                    multiline: false,
+                    placeholder: {
+                        type: "plain_text",
+                        text: "Optional reason"
+                    }
+                },
+                label: {
+                    type: "plain_text",
+                    text: "reason"
+                }
+            },
+            {
+                type: "actions",
+                block_id: "slowmode_disable_block",
+                elements: [
+                    {
+                        type: "button",
+                        text: {
+                            type: "plain_text",
+                            text: "Turn off Slowmode"
+                        },
+                        style: "danger",
+                        action_id: "slowmode_disable_button",
+                        value: channel
+                    }
+                ]
+            }
+        ]
+    };
 
-            await client.chat.postMessage({
-                channel: process.env.MIRRORCHANNEL,
-                text: `<@${user_id}> turned on slowmode in <#${channel}> - ${time.toString()} second wait between each message`
-            });
-            await client.chat.postMessage({
-                channel: channel,
-                user: user_id,
-                text: `Slowmode has been enabled - ${time.toString()} second wait between each message`
-            });
-        }
-    } catch(e) {
-        console.log(e);
-    }
+    await client.views.open({
+        trigger_id: payload.trigger_id,
+        view: slowmodeModal
+    })
 
     // TODO: send message in firehouse logs
     // TODO: cancel slowmode
