@@ -5,7 +5,7 @@ require("dotenv").config();
 
 async function startSlowMode(args) {
     const { client, payload } = args
-    const { user, ts, text, channel, subtype } = payload
+    const { user, ts, text, channel, subtype, thread_ts } = payload
 
     if (subtype) return;
 
@@ -87,6 +87,7 @@ async function startSlowMode(args) {
         await client.chat.postEphemeral({
             channel: channel,
             user: user,
+            thread_ts: thread_ts,
             text: `Slowmode active: you can send another message in ${timeRemaining} seconds.\n\nYour message was:\n${text}`
         });
     } else {
