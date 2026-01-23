@@ -1,7 +1,7 @@
 // Work in progress, currently unused
 
 const puppeteer = require('puppeteer');
-require('dotenv').config();
+const { env } = require('./env');
 
 /** @param {string} user_email */
 const hackclubSignup = async (user_email) => {

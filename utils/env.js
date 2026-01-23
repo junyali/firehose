@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 /**
  * @param {string} name
  * @returns {string}
@@ -12,6 +10,7 @@ function requireEnv(name) {
     return value;
 }
 
+process.loadEnvFile();
 const env = {
     SLACK_SIGNING_SECRET: requireEnv('SLACK_SIGNING_SECRET'),
     SLACK_BOT_TOKEN: requireEnv('SLACK_BOT_TOKEN'),
@@ -23,6 +22,9 @@ const env = {
     DEV_CHANNEL: process.env.DEV_CHANNEL,
     PORT: process.env.PORT,
     NODE_ENV: process.env.NODE_ENV,
+    API_KEY: process.env.API_KEY,
+    SLACK_LOG_CHANNEL: process.env.SLACK_LOG_CHANNEL,
+    GRAPHITE_HOST: process.env.GRAPHITE_HOST, // unused
 };
 
 module.exports = { env };

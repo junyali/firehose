@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+// const { PrismaClient } = require('@prisma/client');
 const { getPrisma } = require('../utils/prismaConnector');
 const { env } = require('../utils/env');
 const getChannelManagers = require('../utils/isChannelManger');

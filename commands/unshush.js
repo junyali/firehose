@@ -1,4 +1,4 @@
-const { user } = require('slack-block-builder');
+// const { user } = require('slack-block-builder');
 const { getPrisma } = require('../utils/prismaConnector');
 const { env } = require('../utils/env');
 

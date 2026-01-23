@@ -1,12 +1,12 @@
 // Work in progress, currently unused
 
-require('dotenv').config();
+const { env } = require('./env');
 const { App } = require('@slack/bolt');
 const app = new App({
-    token: process.env.SLACK_BOT_TOKEN,
+    token: env.SLACK_BOT_TOKEN,
     socketMode: true,
-    appToken: process.env.SLACK_APP_TOKEN,
-    signingSecret: process.env.SLACK_SIGNING_SECRET,
+    appToken: env.SLACK_APP_TOKEN,
+    signingSecret: env.SLACK_SIGNING_SECRET,
     // port: 3008
 });
 
@@ -40,7 +40,7 @@ app.message('archive', async ({ message, say, client, body }) => {
                                 text: 'Archiving this channel! If you want to contest, dm @arav',
                             });
                             app.client.conversations.archive({
-                                token: process.env.SLACK_USER_TOKEN,
+                                token: env.SLACK_USER_TOKEN,
                                 channel: 'C078K46G9NU',
                             });
                             app.client.chat.postMessage({
@@ -62,7 +62,7 @@ app.message('archive', async ({ message, say, client, body }) => {
                     text: 'Archiving this channel! If you want to contest, dm @arav',
                 });
                 app.client.conversations.archive({
-                    token: process.env.SLACK_USER_TOKEN,
+                    token: env.SLACK_USER_TOKEN,
                     channel: 'C078K46G9NU',
                 });
                 app.client.chat.postMessage({

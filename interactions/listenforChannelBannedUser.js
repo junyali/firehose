@@ -1,5 +1,5 @@
 const { getPrisma } = require('../utils/prismaConnector');
-require('dotenv').config();
+const { env } = require('../utils/env');
 
 /** @param {import('@slack/bolt').SlackEventMiddlewareArgs<'message'> & import('@slack/bolt').AllMiddlewareArgs} args */
 async function listenforChannelBannedUser(args) {
@@ -11,7 +11,6 @@ async function listenforChannelBannedUser(args) {
     if (subtype === 'bot_message' || !user) return;
     const userID = user;
     const slackChannel = channel;
-    let messageText = text;
     let userData = await prisma.user.findFirst({
         where: {
             user: userID,
@@ -24,13 +23,13 @@ async function listenforChannelBannedUser(args) {
     await client.chat.delete({
         channel: slackChannel,
         ts: ts,
-        token: process.env.SLACK_USER_TOKEN,
+        token: env.SLACK_USER_TOKEN,
     });
     try {
         await client.conversations.kick({
             channel: slackChannel,
             user: userID,
-            token: process.env.SLACK_USER_TOKEN,
+            token: env.SLACK_USER_TOKEN,
         });
     } catch (e) {
         console.log('kicking failed');
@@ -44,7 +43,7 @@ async function listenforChannelBannedUser(args) {
 
     // messageText = `> ${messageText}`
     // console.log("mirroring message")
-    // let mirrorChannel = process.env.MIRRORCHANNEL;
+    // let mirrorChannel = env.MIRRORCHANNEL;
     // await client.chat.postMessage({
     //     channel: mirrorChannel,
     //     text: `${messageText}\nMessaged deleted in <#${channel}>`,

@@ -1,3 +1,5 @@
+const { env } = require('./env');
+
 /** @param {{ email: string, channels: string, _customMessage?: string }} params */
 async function inviteGuestToSlack({ email, channels, _customMessage }) {
     // This is an undocumented API method found in https://github.com/ErikKalkoken/slackApiDoc/pull/70
@@ -7,7 +9,7 @@ async function inviteGuestToSlack({ email, channels, _customMessage }) {
     // The SLACK_BROWSER_TOKEN is a xoxc-* token found in browser local storage using this script: https://gist.github.com/maxwofford/5779ea072a5485ae3b324f03bc5738e1
 
     // I haven't yet found out how to add custom messages, so those are ignored for now
-    const cookieValue = `d=${process.env.SLACK_COOKIE}`;
+    const cookieValue = `d=${env.SLACK_COOKIE}`;
 
     // Create a new Headers object
     const headers = new Headers();
@@ -15,10 +17,10 @@ async function inviteGuestToSlack({ email, channels, _customMessage }) {
     // Add the cookie to the headers
     headers.append('Cookie', cookieValue);
     headers.append('Content-Type', 'application/json');
-    headers.append('Authorization', `Bearer ${process.env.SLACK_BROWSER_TOKEN}`);
+    headers.append('Authorization', `Bearer ${env.SLACK_BROWSER_TOKEN}`);
 
     const data = JSON.stringify({
-        token: process.env.SLACK_BROWSER_TOKEN,
+        token: env.SLACK_BROWSER_TOKEN,
         invites: [
             {
                 email,

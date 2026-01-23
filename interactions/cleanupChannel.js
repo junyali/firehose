@@ -1,7 +1,7 @@
-const { response } = require('express');
-const readOnly = require('../commands/readOnly');
+// const { response } = require('express');
+// const readOnly = require('../commands/readOnly');
 const { getPrisma } = require('../utils/prismaConnector');
-require('dotenv').config();
+const { env } = require('../utils/env');
 
 /** @param {import('@slack/bolt').SlackEventMiddlewareArgs<'message'> & import('@slack/bolt').AllMiddlewareArgs} args */
 async function cleanupChannel(args) {
@@ -78,7 +78,7 @@ async function cleanupChannel(args) {
                 await client.chat.delete({
                     channel: channel,
                     ts: ts,
-                    token: process.env.SLACK_USER_TOKEN,
+                    token: env.SLACK_USER_TOKEN,
                 });
 
                 if (!bot_id) {
@@ -109,7 +109,7 @@ async function cleanupChannel(args) {
             await client.chat.delete({
                 channel: channel,
                 ts: ts,
-                token: process.env.SLACK_USER_TOKEN,
+                token: env.SLACK_USER_TOKEN,
             });
             console.log('Message deleted successfully');
         } catch (e) {
@@ -137,7 +137,7 @@ async function cleanupChannel(args) {
             await client.chat.delete({
                 channel: channel,
                 ts: ts,
-                token: process.env.SLACK_USER_TOKEN,
+                token: env.SLACK_USER_TOKEN,
             });
             await client.chat.postEphemeral({
                 channel: channel,

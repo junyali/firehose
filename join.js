@@ -1,10 +1,10 @@
 // This code was ai generated
 
 const { WebClient } = require('@slack/web-api');
-require('dotenv').config();
+const { env } = require('./utils/env');
 
 // Replace with your bot token
-const token = process.env.SLACK_BOT_TOKEN; // Use an environment variable for security
+const token = env.SLACK_BOT_TOKEN; // Use an environment variable for security
 const web = new WebClient(token);
 
 async function countChannels() {

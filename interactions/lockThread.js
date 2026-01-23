@@ -1,13 +1,13 @@
 // Work in progress, currently unused
 
-require('dotenv').config();
+const { env } = require('../utils/env');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function lockThread(args) {
     receiver.router.get('/lock', async (req, res) => {
         const { key } = req.query;
-        if (!process.env.API_KEY || key !== process.env.API_KEY)
+        if (!env.API_KEY || key !== env.API_KEY)
             return res.status(401).json({ ok: false, error: 'Please provide a valid API key' });
         return await prisma.thread.findMany({
             where: {},
@@ -15,7 +15,7 @@ async function lockThread(args) {
     });
     receiver.router.post('/lock', async (req, res) => {
         const { id, user, time, reason, channel, key } = req.query;
-        if (!process.env.API_KEY || key !== process.env.API_KEY)
+        if (!env.API_KEY || key !== env.API_KEY)
             return res.status(401).json({ ok: false, error: 'Please provide a valid API key' });
         time = new Date(time).toISOString();
         if (!id || !user || !time || isNaN(new Date(time)) || !channel)
@@ -80,7 +80,7 @@ async function lockThread(args) {
             });
             threads.forEach(async (thread) => {
                 await app.client.chat.postMessage({
-                    channel: process.env.SLACK_LOG_CHANNEL,
+                    channel: env.SLACK_LOG_CHANNEL,
                     text: `🔓 Thread unlocked in <#${thread.channel}>
 Reason: Autounlock (triggered by cron job)
 Admin: System
@@ -188,7 +188,7 @@ Link: https://hackclub.slack.com/archives/${thread.channel}/p${thread.id.toStrin
             });
 
             await app.client.chat.postMessage({
-                channel: process.env.SLACK_LOG_CHANNEL,
+                channel: env.SLACK_LOG_CHANNEL,
                 text: `🔒 Thread locked in <#${channel_id}>
 Reason: ${reason}
 Expires: ${expires.toLocaleString('en-US', { timeZone: 'America/New_York', timeStyle: 'short', dateStyle: 'long' })} (EST)
@@ -237,12 +237,12 @@ Link: https://hackclub.slack.com/archives/${channel_id}/p${thread_id.toString().
                             // Delete the chat message
                             channel: message.channel,
                             ts: message.ts,
-                            token: process.env.SLACK_USER_TOKEN,
+                            token: env.SLACK_USER_TOKEN,
                         });
                     }
                 } else if (thread.active && thread.time < new Date()) {
                     await app.client.chat.postMessage({
-                        channel: process.env.SLACK_LOG_CHANNEL,
+                        channel: env.SLACK_LOG_CHANNEL,
                         text: `🔓 Thread unlocked in <#${message.channel}>
 Reason: Autounlock (triggered by message)
 Admin: System
@@ -328,7 +328,7 @@ Link: https://hackclub.slack.com/archives/${thread.channel}/p${thread.id.toStrin
                 });
 
                 await app.client.chat.postMessage({
-                    channel: process.env.SLACK_LOG_CHANNEL,
+                    channel: env.SLACK_LOG_CHANNEL,
                     text: `🔓 Thread unlocked in <#${body.channel.id}>
 Reason: Admin clicked unlock.
 Link: https://hackclub.slack.com/archives/${body.channel.id}/p${body.message.thread_ts.toString().replace('.', '')}`,

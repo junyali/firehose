@@ -1,7 +1,7 @@
-const chrono = require('chrono-node');
+// const chrono = require('chrono-node');
 const { getPrisma } = require('../utils/prismaConnector');
-const channelBan = require('./channelBan');
-require('dotenv').config();
+// const channelBan = require('./channelBan');
+const { env } = require('../utils/env');
 
 /** @param {import('@slack/bolt').SlackCommandMiddlewareArgs & import('@slack/bolt').AllMiddlewareArgs} args */
 async function banList(args) {

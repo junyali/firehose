@@ -1,5 +1,5 @@
 const { getPrisma } = require('../utils/prismaConnector');
-require('dotenv').config();
+const { env } = require('../utils/env');
 
 /** @param {import('@slack/bolt').SlackEventMiddlewareArgs<'message'> & import('@slack/bolt').AllMiddlewareArgs} args */
 async function startSlowMode(args) {
