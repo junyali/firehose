@@ -1,7 +1,7 @@
 // This code was ai generated
 
 const { WebClient } = require('@slack/web-api');
-require("dotenv").config();
+require('dotenv').config();
 
 // Replace with your bot token
 const token = process.env.SLACK_BOT_TOKEN; // Use an environment variable for security
@@ -18,7 +18,7 @@ async function countChannels() {
             const result = await web.conversations.list({
                 types: 'public_channel', // You can change this to include 'private_channel' if needed
                 cursor: nextCursor, // Use the cursor for pagination
-                limit: 100 // Optional: set a limit for how many channels to return per request
+                limit: 100, // Optional: set a limit for how many channels to return per request
             });
 
             const channels = result.channels || []; // Ensure channels is an array

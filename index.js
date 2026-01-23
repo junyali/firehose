@@ -1,16 +1,15 @@
-const { App, LogLevel, ExpressReceiver } = require("@slack/bolt");
-require("dotenv").config();
+const { App, LogLevel, ExpressReceiver } = require('@slack/bolt');
+require('dotenv').config();
 const { getPrisma } = require('./utils/prismaConnector.js');
 const prisma = getPrisma();
-const express = require('express')
+const express = require('express');
 
 const isDevMode = process.env.NODE_ENV === 'development';
 const devChannel = process.env.DEV_CHANNEL;
 
 const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-})
-
+    signingSecret: process.env.SLACK_SIGNING_SECRET,
+});
 
 const app = new App({
     token: process.env.SLACK_BOT_TOKEN,
@@ -21,72 +20,67 @@ const app = new App({
     port: process.env.PORT || 3000,
 });
 
-receiver.router.use(express.json())
-receiver.router.get('/', require('./endpoints/index'))
-receiver.router.get('/ping', require('./endpoints/ping'))
+receiver.router.use(express.json());
+receiver.router.get('/', require('./endpoints/index'));
+receiver.router.get('/ping', require('./endpoints/ping'));
 
 if (!isDevMode) {
     app.client.chat.postMessage({
         channel: process.env.MIRRORCHANNEL,
-        text: `Firehose is online again!`
-    })
+        text: `Firehose is online again!`,
+    });
 }
 
-app.event("channel_created", async ({ event, client }) => {
+app.event('channel_created', async ({ event, client }) => {
     if (isDevMode) return;
 
     try {
         const channelId = event.channel.id;
         await client.conversations.join({ channel: channelId });
     } catch (e) {
-        app.logger.error(e)
-    } 
+        app.logger.error(e);
+    }
 });
 
-app.event("channel_left", async ({ event, client }) => {
-  if (isDevMode) return;
+app.event('channel_left', async ({ event, client }) => {
+    if (isDevMode) return;
 
-  try {
-    const channelID = event.channel;
-    const user = event.actor_id;
-    console.log(
-      `User <@${user}> removed Firehose from <#${channelID}>, rejoining!`,
-    );
-    app.client.chat.postMessage({
-      channel: process.env.MIRRORCHANNEL,
-      text: `User </@${user}> removed Firehose from <#${channelID}>, rejoining!`,
-    });
-    await client.conversations.join({ channel: channelID });
-  } catch (e) {
-    console.log(e);
-  }
+    try {
+        const channelID = event.channel;
+        const user = event.actor_id;
+        console.log(`User <@${user}> removed Firehose from <#${channelID}>, rejoining!`);
+        app.client.chat.postMessage({
+            channel: process.env.MIRRORCHANNEL,
+            text: `User </@${user}> removed Firehose from <#${channelID}>, rejoining!`,
+        });
+        await client.conversations.join({ channel: channelID });
+    } catch (e) {
+        console.log(e);
+    }
 });
 
 app.event('message', async (args) => {
     // begin the firehose
-    const { body, client } = args
-    const { event } = body
-    const { type, subtype, user, channel, ts, text } = event
+    const { body, client } = args;
+    const { event } = body;
+    const { type, subtype, user, channel, ts, text } = event;
 
-    console.log("New message event received:", { type, subtype, user, channel, ts, text });
+    console.log('New message event received:', { type, subtype, user, channel, ts, text });
 
     if (isDevMode && channel !== devChannel) return;
 
-    const cleanupChannel = await require("./interactions/cleanupChannel.js");
+    const cleanupChannel = await require('./interactions/cleanupChannel.js');
     await cleanupChannel(args);
-    const shushBan = await require("./interactions/listenforBannedUser.js");
+    const shushBan = await require('./interactions/listenforBannedUser.js');
     await shushBan(args);
-    const startSlowMode = await require("./interactions/startSlowMode.js");
+    const startSlowMode = await require('./interactions/startSlowMode.js');
     await startSlowMode(args);
-    const listenforChannelBannedUser = await require("./interactions/listenforChannelBannedUser.js");
+    const listenforChannelBannedUser =
+        await require('./interactions/listenforChannelBannedUser.js');
     await listenforChannelBannedUser(args);
-
-
 });
 
-
 app.command(/.*?/, async (args) => {
-
     const { ack, command, respond } = args;
 
     await ack();
@@ -114,15 +108,13 @@ app.command(/.*?/, async (args) => {
             await require('./commands/unshush.js')(args);
             break;
         case '/purge':
-            await require('./commands/purge.js')(args)
+            await require('./commands/purge.js')(args);
             break;
         default:
             await respond(`I don't know how to respond to the command ${command.command}`);
             break;
     }
-
-})
-
+});
 
 // Start the app on the specified port
 const port = process.env.PORT || 3000; // Get the port from environment variable or default to 3000

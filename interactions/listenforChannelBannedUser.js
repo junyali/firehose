@@ -1,45 +1,44 @@
-const { getPrisma } = require("../utils/prismaConnector")
-require("dotenv").config();
-
+const { getPrisma } = require('../utils/prismaConnector');
+require('dotenv').config();
 
 async function listenforChannelBannedUser(args) {
-    const { client, payload } = args
-    const { user, ts, text, channel, subtype } = payload
+    const { client, payload } = args;
+    const { user, ts, text, channel, subtype } = payload;
     const prisma = getPrisma();
 
-    if (subtype === "bot_message" || !user) return;
+    if (subtype === 'bot_message' || !user) return;
     const userID = user;
     const slackChannel = channel;
     let messageText = text;
     let userData = await prisma.user.findFirst({
-        where: {  
+        where: {
             user: userID,
-            channel: slackChannel
+            channel: slackChannel,
         },
     });
 
-    if (!userData) return; 
+    if (!userData) return;
 
-    await client.chat.delete({  
+    await client.chat.delete({
         channel: slackChannel,
         ts: ts,
-        token: process.env.SLACK_USER_TOKEN
+        token: process.env.SLACK_USER_TOKEN,
     });
     try {
         await client.conversations.kick({
             channel: slackChannel,
             user: userID,
-            token: process.env.SLACK_USER_TOKEN
-        })
+            token: process.env.SLACK_USER_TOKEN,
+        });
     } catch (e) {
-        console.log("kicking failed")
+        console.log('kicking failed');
     }
-    
-await client.chat.postEphemeral({
-    channel: channel,
-    user: user,
-    text: `Your message has been deleted because you're banned from this channel because ${userData.reason}`
-})
+
+    await client.chat.postEphemeral({
+        channel: channel,
+        user: user,
+        text: `Your message has been deleted because you're banned from this channel because ${userData.reason}`,
+    });
 
     // messageText = `> ${messageText}`
     // console.log("mirroring message")
@@ -56,16 +55,14 @@ await client.chat.postEphemeral({
             channel: mirrorChannel,
             user: userID,
             text: `:wave_pikachu_2: Your message was deleted because ${userData.reason}`,
-        })
+        });
     } catch (e) {
         await client.chat.postEphemeral({
             channel: channel,
             user: user,
-            text: `An error occurred: ${e}`
+            text: `An error occurred: ${e}`,
         });
     }
-
-
 }
 
 module.exports = listenforChannelBannedUser;
