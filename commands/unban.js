@@ -5,8 +5,8 @@ async function unban(args) {
     const { user_id, text, channel_id } = payload;
     const prisma = getPrisma();
     const commands = text.split(" ");
-    const userToBan = commands[0].split('|')[0].replace("<@", "");
-    let channel = commands[1].split('|')[0].replace("<#", "");
+    const userToBan = commands[0].match(/<@([A-Z0-9]+)\|?.*>/)?.[1];
+    let channel = commands[1].match(/<#([A-Z0-9]+)\|?.*>/)?.[1];
     const getUser = await prisma.user.deleteMany({ where: { user: userToBan, channel: channel } });
 
 

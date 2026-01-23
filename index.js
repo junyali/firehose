@@ -4,6 +4,8 @@ const { getPrisma } = require('./utils/prismaConnector.js');
 const prisma = getPrisma();
 const express = require('express')
 
+const isDevMode = process.env.NODE_ENV === 'development';
+const devChannel = process.env.DEV_CHANNEL;
 
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -13,8 +15,8 @@ const receiver = new ExpressReceiver({
 const app = new App({
     token: process.env.SLACK_BOT_TOKEN,
     signingSecret: process.env.SLACK_SIGNING_SECRET,
-    receiver,
-    socketMode: false,
+    receiver: isDevMode ? undefined : receiver,
+    socketMode: isDevMode,
     appToken: process.env.SLACK_APP_TOKEN,
     port: process.env.PORT || 3000,
 });
@@ -23,12 +25,16 @@ receiver.router.use(express.json())
 receiver.router.get('/', require('./endpoints/index'))
 receiver.router.get('/ping', require('./endpoints/ping'))
 
-app.client.chat.postMessage({
-    channel: process.env.MIRRORCHANNEL,
-    text: `Firehose is online again!`
-})
+if (!isDevMode) {
+    app.client.chat.postMessage({
+        channel: process.env.MIRRORCHANNEL,
+        text: `Firehose is online again!`
+    })
+}
 
 app.event("channel_created", async ({ event, client }) => {
+    if (isDevMode) return;
+
     try {
         const channelId = event.channel.id;
         await client.conversations.join({ channel: channelId });
@@ -38,6 +44,8 @@ app.event("channel_created", async ({ event, client }) => {
 });
 
 app.event("channel_left", async ({ event, client }) => {
+  if (isDevMode) return;
+
   try {
     const channelID = event.channel;
     const user = event.actor_id;
@@ -60,6 +68,10 @@ app.event('message', async (args) => {
     const { event } = body
     const { type, subtype, user, channel, ts, text } = event
 
+    console.log("New message event received:", { type, subtype, user, channel, ts, text });
+
+    if (isDevMode && channel !== devChannel) return;
+
     const cleanupChannel = await require("./interactions/cleanupChannel.js");
     await cleanupChannel(args);
     const shushBan = await require("./interactions/listenforBannedUser.js");
@@ -72,14 +84,6 @@ app.event('message', async (args) => {
 
 });
 
-const handleEvent = require("./events/index.js");
-const handleAction = require("./actions/index.js");
-const handleViews = require("./views/index.js");
-
-app.event(/.*/, handleEvent); // Catch all events dynamically
-app.action(/.*/, handleAction) // Catch all actions dynamically
-app.view(/.*/, handleViews)
-
 
 app.command(/.*?/, async (args) => {
 
@@ -87,7 +91,7 @@ app.command(/.*?/, async (args) => {
 
     await ack();
 
-    switch (command.command) {
+    switch (command.command.replace(/^\/.*dev-/, '/')) {
         case '/channelban':
             await require('./commands/channelBan')(args);
             break;
@@ -123,5 +127,5 @@ app.command(/.*?/, async (args) => {
 // Start the app on the specified port
 const port = process.env.PORT || 3000; // Get the port from environment variable or default to 3000
 app.start(port).then(() => {
-    app.logger.info(`Bolt is running on `)
+    app.logger.info(`Bolt is running on port ${port}`);
 });

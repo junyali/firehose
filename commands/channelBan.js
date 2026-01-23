@@ -11,8 +11,9 @@ async function channelBan(args) {
     const isAdmin = userInfo.user.is_admin;
     const commands = text.split(" ");
     const reason = commands.slice(2).join(" ");
-    const userToBan = commands[0].split('|')[0].replace("<@", "");
-    const channel = commands[1].split('|')[0].replace("<#", "");
+    const userToBan = commands[0].match(/<@([A-Z0-9]+)\|?.*>/)?.[1];
+    const channel = commands[1].match(/<#([A-Z0-9]+)\|?.*>/)?.[1];
+    console.log(text, commands, userToBan, channel, reason);
     //TODO: Add temporary channel banning
     const time = chrono.parse(`${commands[3]}`);
 
@@ -49,7 +50,7 @@ async function channelBan(args) {
         });
 
         await client.chat.postMessage({
-            channel: user,
+            channel: userToBan,
             text: `You've been banned from <#${channel}>. A Fire Dept (community moderator) will reach out to you shortly with the reason`
         })
 

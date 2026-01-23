@@ -12,7 +12,7 @@ async function readOnly(args) {
     const prisma = getPrisma();
     const commands = text.split(" ");
     const userInfo = await client.users.info({ user: user_id });
-    const channel = commands[0].split('|')[0].replace("<#", "");
+    const channel = commands[0].match(/<#([A-Z0-9]+)\|?.*>/)?.[1];
     const isAdmin = (await userInfo).user.is_admin;
     const channelManagers = await getChannelManagers(channel_id);
 

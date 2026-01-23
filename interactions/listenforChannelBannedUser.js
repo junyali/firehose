@@ -58,7 +58,11 @@ await client.chat.postEphemeral({
             text: `:wave_pikachu_2: Your message was deleted because ${userData.reason}`,
         })
     } catch (e) {
-        await say(`An error occured: ${e}`);
+        await client.chat.postEphemeral({
+            channel: channel,
+            user: user,
+            text: `An error occurred: ${e}`
+        });
     }
 
 

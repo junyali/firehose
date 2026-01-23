@@ -9,7 +9,7 @@ async function slowmode(args) {
     const commands = text.split(" ");
     const userInfo = await client.users.info({ user: user_id });
     const isAdmin = userInfo.user.is_admin;
-    const channel = commands[0].split('|')[0].replace("<#", "");
+    const channel = commands[0].match(/<#([A-Z0-9]+)\|?.*>/)?.[1];
     let count = Number(commands[1]);
     let time = Number(commands[2]);
 

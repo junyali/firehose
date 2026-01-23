@@ -8,7 +8,7 @@ async function shushBan(args) {
   const userInfo = await client.users.info({ user: user_id });
   const isAdmin = userInfo.user.is_admin;
   const commands = text.split(" ");
-  const userToBan = commands[0].split("|")[0].replace("<@", "");
+  const userToBan = commands[0].match(/<@([A-Z0-9]+)\|?.*>/)?.[1];
   const reason = commands.slice(1).join(" ");
 
   // // const userProfile = await client.users.profile.get({ user: userToBan });
