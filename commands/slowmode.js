@@ -1,5 +1,5 @@
 const { getPrisma } = require('../utils/prismaConnector');
-const getChannelManagers = require('../utils/isChannelManger');
+const getChannelManagers = require('../utils/isChannelManager');
 
 /** @param {import('@slack/bolt').SlackCommandMiddlewareArgs & import('@slack/bolt').AllMiddlewareArgs} args */
 async function slowmode(args) {

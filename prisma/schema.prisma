@@ -53,7 +53,7 @@ model SlowUsers {
   id        Int      @id @default(autoincrement())
   channel   String
   user      String
-  count     Int?
+  lastMessageAt Int?
   whitelist Boolean? @default(false)
   threadTs  String   @default("")
 

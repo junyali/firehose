@@ -1,5 +1,5 @@
 const { getPrisma } = require('../utils/prismaConnector');
-const getChannelManagers = require('../utils/isChannelManger');
+const getChannelManagers = require('../utils/isChannelManager');
 const { env } = require('../utils/env');
 
 // Use a cache for user info so a very fast thread (or someone spamming) doesn't hit rate limits
@@ -8,22 +8,22 @@ const userInfoCache = new Map();
 const USER_CACHE_TTL_MS = 60 * 1000;
 
 /** @param {import('@slack/bolt').SlackEventMiddlewareArgs<'message'> & import('@slack/bolt').AllMiddlewareArgs} args */
-async function startSlowMode(args) {
+async function enforceSlowMode(args) {
     const { client, payload } = args;
-    const event =
-        /** @type {{user: string, ts: string, text: string, channel: string, subtype?: string, thread_ts?: string}} */ (
-            payload
-        );
-    const { user, ts, text, channel, subtype, thread_ts } = event;
+    if (!payload || payload.type !== 'message' || !('user' in payload)) {
+        return;
+    }
+    const { user, ts, text, channel, subtype } = payload;
+    const thread_ts = 'thread_ts' in payload ? payload.thread_ts : undefined;
 
     if (subtype) return;
 
     const prisma = getPrisma();
 
-    let getSlowmode = null;
+    let slowmodeConfig = null;
 
     if (thread_ts) {
-        getSlowmode = await prisma.slowmode.findFirst({
+        slowmodeConfig = await prisma.slowmode.findFirst({
             where: {
                 channel: channel,
                 threadTs: thread_ts,
@@ -31,9 +31,8 @@ async function startSlowMode(args) {
             },
         });
     }
-
-    if (!getSlowmode) {
-        getSlowmode = await prisma.slowmode.findFirst({
+    if (!slowmodeConfig) {
+        slowmodeConfig = await prisma.slowmode.findFirst({
             where: {
                 channel: channel,
                 threadTs: '',
@@ -42,25 +41,25 @@ async function startSlowMode(args) {
         });
     }
 
-    if (!getSlowmode) return;
+    if (!slowmodeConfig) return;
 
-    if (getSlowmode.expiresAt && new Date() > getSlowmode.expiresAt) {
+    if (slowmodeConfig.expiresAt && new Date() > slowmodeConfig.expiresAt) {
         await Promise.all([
             prisma.slowmode.update({
                 where: {
-                    id: getSlowmode.id,
+                    id: slowmodeConfig.id,
                 },
                 data: {
                     locked: false,
                 },
             }),
             prisma.slowUsers.deleteMany({
-                where: { channel: channel },
+                where: { channel: channel, threadTs: slowmodeConfig.threadTs },
             }),
         ]);
 
-        const locationText = getSlowmode.threadTs
-            ? `https://hackclub.slack.com/archives/${channel}/p${(thread_ts || '').toString().replace('.', '')}`
+        const locationText = slowmodeConfig.threadTs
+            ? `https://hackclub.slack.com/archives/${channel}/p${slowmodeConfig.threadTs.replace('.', '')}`
             : `<#${channel}>`;
 
         // TODO: add a cron job for SlowUsers cleanup and automatic expiry messages
@@ -82,14 +81,14 @@ async function startSlowMode(args) {
         userInfoCache.set(user, { isAdmin, expiresAt: Date.now() + USER_CACHE_TTL_MS });
     }
     const isManager = (await getChannelManagers(channel)).includes(user);
-    const isWhitelisted = getSlowmode.whitelistedUsers?.includes(user) || false;
+    const isWhitelisted = slowmodeConfig.whitelistedUsers?.includes(user) || false;
     const isExempt = isAdmin || isManager || isWhitelisted;
     if (isExempt) return;
 
     const userData = await prisma.slowUsers.findFirst({
         where: {
             channel: channel,
-            threadTs: getSlowmode.threadTs,
+            threadTs: slowmodeConfig.threadTs,
             user: user,
         },
     });
@@ -100,18 +99,18 @@ async function startSlowMode(args) {
         await prisma.slowUsers.create({
             data: {
                 channel: channel,
-                threadTs: getSlowmode.threadTs,
+                threadTs: slowmodeConfig.threadTs,
                 user: user,
-                count: Math.floor(now / 1000),
+                lastMessageAt: Math.floor(now / 1000),
             },
         });
         return;
     }
 
-    const timeSinceLastMessage = Math.floor(now / 1000) - (userData.count || 0);
+    const timeSinceLastMessage = Math.floor(now / 1000) - (userData.lastMessageAt || 0);
 
-    if (timeSinceLastMessage < (getSlowmode.time || 0)) {
-        const timeRemaining = Math.ceil((getSlowmode.time || 0) - timeSinceLastMessage);
+    if (timeSinceLastMessage < (slowmodeConfig.time || 0)) {
+        const timeRemaining = Math.ceil((slowmodeConfig.time || 0) - timeSinceLastMessage);
         try {
             await client.chat.delete({
                 channel: channel,
@@ -133,21 +132,21 @@ async function startSlowMode(args) {
             where: {
                 channel_threadTs_user: {
                     channel: channel,
-                    threadTs: getSlowmode.threadTs,
+                    threadTs: slowmodeConfig.threadTs,
                     user: user,
                 },
             },
             create: {
                 channel: channel,
-                threadTs: getSlowmode.threadTs,
+                threadTs: slowmodeConfig.threadTs,
                 user: user,
-                count: Math.floor(now / 1000),
+                lastMessageAt: Math.floor(now / 1000),
             },
             update: {
-                count: Math.floor(now / 1000),
+                lastMessageAt: Math.floor(now / 1000),
             },
         });
     }
 }
 
-module.exports = startSlowMode;
+module.exports = enforceSlowMode;

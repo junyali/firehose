@@ -97,7 +97,7 @@ async function slowmode_modal(args) {
                         threadTs: '',
                         user: userId,
                         whitelist: true,
-                        count: 0,
+                        lastMessageAt: 0,
                     },
                     update: { whitelist: true },
                 })

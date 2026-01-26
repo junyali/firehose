@@ -19,6 +19,9 @@ ADD COLUMN     "threadTs" TEXT NOT NULL DEFAULT '',
 ALTER COLUMN "channel" SET NOT NULL,
 ALTER COLUMN "user" SET NOT NULL;
 
+-- RenameColumn
+ALTER TABLE "SlowUsers" RENAME COLUMN "count" TO "lastMessageAt";
+
 -- AlterTable
 ALTER TABLE "Slowmode" DROP COLUMN "messageCount",
 ADD COLUMN     "admin" TEXT,

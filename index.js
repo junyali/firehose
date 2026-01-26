@@ -9,7 +9,7 @@ const pingEndpoint = require('./endpoints/ping');
 
 const cleanupChannel = require('./interactions/cleanupChannel.js');
 const listenforBannedUser = require('./interactions/listenforBannedUser.js');
-const startSlowMode = require('./interactions/startSlowMode.js');
+const enforceSlowMode = require('./interactions/enforceSlowMode.js');
 const listenforChannelBannedUser = require('./interactions/listenforChannelBannedUser.js');
 
 const channelBanCommand = require('./commands/channelBan');
@@ -94,7 +94,7 @@ app.event('message', async (args) => {
 
     await cleanupChannel(args);
     await listenforBannedUser(args);
-    await startSlowMode(args);
+    await enforceSlowMode(args);
     await listenforChannelBannedUser(args);
 });
 
