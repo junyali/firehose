@@ -50,12 +50,12 @@ model Slowmode {
 }
 
 model SlowUsers {
-  id        Int      @id @default(autoincrement())
-  channel   String
-  user      String
+  id            Int      @id @default(autoincrement())
+  channel       String
+  user          String
   lastMessageAt Int?
-  whitelist Boolean? @default(false)
-  threadTs  String   @default("")
+  whitelist     Boolean? @default(false)
+  threadTs      String   @default("")
 
   @@unique([channel, threadTs, user], name: "channel_threadTs_user")
 }
