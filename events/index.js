@@ -1,21 +1,24 @@
-const path = require("path");
+const message = require('./message');
 
-async function handleEvent({ event, client, body, say }) {
-  try {
-    console.log(body)
-    const eventName = event.type;
-    const eventFile = path.resolve(__dirname, `${eventName}.js`);
+/** @type {Record<string, Function>} */
+const eventHandlers = {
+    message,
+};
 
-    // Dynamically require event handlers
-    const eventHandler = require(eventFile);
-    if (eventHandler) {
-      await eventHandler({ event, client, body, say });
-    } else {
-      console.warn(`No handler found for event: ${eventName}`);
+/** @param {import('@slack/bolt').SlackEventMiddlewareArgs & import('@slack/bolt').AllMiddlewareArgs} args */
+async function handleEvent(args) {
+    const { event } = args;
+    try {
+        const eventName = event.type;
+
+        if (!Object.hasOwn(eventHandlers, eventName)) {
+            return;
+        }
+        const eventHandler = eventHandlers[eventName];
+        await eventHandler(args);
+    } catch (error) {
+        console.error(`Error handling event ${event.type}:`, error);
     }
-  } catch (error) {
-    console.error(`Error handling event ${event.type}:`, error);
-  }
 }
 
 module.exports = handleEvent;

@@ -1,18 +1,21 @@
-const { StatsD } = require('node-statsd')
+// Not currently used
 
-const env = 'production'
-const graphite = process.env.GRAPHITE_HOST
+const { StatsD } = require('node-statsd');
+const { env } = require('./utils/env');
 
-if (env.toLowerCase() == 'production' && graphite == null) {
-  throw new Error('Graphite is not working')
+const environment = 'production';
+const graphite = env.GRAPHITE_HOST;
+
+if (environment.toLowerCase() == 'production' && graphite == null) {
+    throw new Error('Graphite is not working');
 }
 
 const options = {
-  host: graphite,
-  port: 8125,
-  prefix: `${env}.channelmodtools.`,
-}
+    host: graphite,
+    port: 8125,
+    prefix: `${environment}.channelmodtools.`,
+};
 
-const metrics = new StatsD(options)
+const metrics = new StatsD(options);
 
-module.exports = { metrics }
+module.exports = { metrics };

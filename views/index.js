@@ -1,23 +1,27 @@
-const path = require("path");
+const slowmode_modal = require('./slowmode_modal');
+const slowmode_thread_modal = require('./slowmode_thread_modal');
 
-async function handleViews({ ack, logger, event, client, body, say }) {
-  try {
-    const viewId = body.view.callback_id;
-    const bodyType = body.view.type;
-    // const actionId = firstAction.action_id;
-    // const blockId = firstAction.block_id;    
-    const viewFile = path.resolve(__dirname, `${viewId}.js`);
+/** @type {Record<string, Function>} */
+const viewHandlers = {
+    slowmode_modal,
+    slowmode_thread_modal,
+};
 
-    // Dynamically require action handlers
-    const viewHandler = require(viewFile);
-    if (viewHandler) {
-      await viewHandler({ event, client, body, say, ack, logger });
-    } else {
-      console.warn(`No handler found for view: ${viewId}`);
+/** @param {import('@slack/bolt').SlackViewMiddlewareArgs & import('@slack/bolt').AllMiddlewareArgs} args */
+async function handleViews(args) {
+    const { body } = args;
+    try {
+        const viewId = body.view.callback_id;
+
+        if (!Object.hasOwn(viewHandlers, viewId)) {
+            console.warn(`No handler found for view: ${viewId}`);
+            return;
+        }
+        const viewHandler = viewHandlers[viewId];
+        await viewHandler(args);
+    } catch (error) {
+        console.error(`Error handling view ${body.view.callback_id}:`, error);
     }
-  } catch (error) {
-    console.error(`Error handling view ${body.view.callback_id}:`, error);
-  }
 }
 
 module.exports = handleViews;

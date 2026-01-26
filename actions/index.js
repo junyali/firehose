@@ -1,26 +1,32 @@
-const path = require("path");
+const slowmode_disable_button = require('./slowmode_disable_button');
+const slowmode_thread_disable_button = require('./slowmode_thread_disable_button');
 
-async function handleAction({ ack, event, client, body, say, action, respond, logger }) {
-  try {
-    const firstAction = body.actions[0];
-    const viewId = body.view.callback_id
-    const actionId = firstAction.action_id;
-    const blockId = firstAction.block_id;
+/** @type {Record<string, Function>} */
+const actionHandlers = {
+    slowmode_disable_button,
+    slowmode_thread_disable_button,
+};
 
-    console.log("action triggered:", actionId)
-    const actionFile = path.resolve(__dirname, `${actionId}.js`);
+/** @param {import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockAction> & import('@slack/bolt').AllMiddlewareArgs} args */
+async function handleAction(args) {
+    const { ack, body } = args;
+    try {
+        const firstAction = body.actions[0];
+        const actionId = 'action_id' in firstAction ? firstAction.action_id : '';
 
-    // Dynamically require action handlers
-    const actionHandler = require(actionFile);
-    if (actionHandler) {
-      await actionHandler({ ack, event, client, body, say, action, respond, logger });
-    } else {
-      console.warn(`No handler found for action: ${actionId}`);
+        console.log('action triggered:', actionId);
+
+        if (!Object.hasOwn(actionHandlers, actionId)) {
+            console.warn(`No handler found for action: ${actionId}`);
+            await ack();
+            return;
+        }
+        const actionHandler = actionHandlers[actionId];
+        await actionHandler(args);
+    } catch (error) {
+        console.error(`Error handling action:`, error);
+        await ack();
     }
-  } catch (error) {
-    console.error(`Error handling action ${body.actions[0].action_id}:`, error);
-    if (ack) await ack();
-  }
 }
 
 module.exports = handleAction;

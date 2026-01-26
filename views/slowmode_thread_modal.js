@@ -1,7 +1,7 @@
-// this is virtually the same as slowmode_modal.js
 const { getPrisma } = require('../utils/prismaConnector');
-require('dotenv').config();
+const { env } = require('../utils/env');
 
+/** @param {import('@slack/bolt').SlackViewMiddlewareArgs & import('@slack/bolt').AllMiddlewareArgs} args */
 async function slowmode_thread_modal(args) {
     const { ack, body, client } = args;
     const prisma = getPrisma();
@@ -10,39 +10,46 @@ async function slowmode_thread_modal(args) {
         const view = body.view;
         const metadata = JSON.parse(view.private_metadata);
         const { channel_id, admin_id, command_channel, thread_ts } = metadata;
-        const submittedValues = view.state.values;
-        const slowmodeTime = parseInt(submittedValues.slowmode_time_block.slowmode_time_input.value);
-        const slowmodeDuration = submittedValues.slowmode_duration_block.slowmode_duration_input.selected_date_time;
-        const reason = submittedValues.slowmode_reason_block.slowmode_reason_input.value || "";
-        const whitelistedUsers = submittedValues.slowmode_whitelist_block.slowmode_whitelist_input.selected_users || [];
+        const submittedValues = /** @type {Record<string, Record<string, any>>} */ (
+            view.state.values
+        );
+        const slowmodeTime = parseInt(
+            submittedValues.slowmode_time_block.slowmode_time_input.value || '0'
+        );
+        const slowmodeDuration =
+            submittedValues.slowmode_duration_block.slowmode_duration_input.selected_date_time;
+        const reason = submittedValues.slowmode_reason_block.slowmode_reason_input.value || '';
+        const whitelistedUsers =
+            submittedValues.slowmode_whitelist_block.slowmode_whitelist_input.selected_users || [];
+        /** @type {Record<string, string>} */
         const errors = {};
 
         let expiresAt = null;
         if (slowmodeDuration) {
             expiresAt = new Date(slowmodeDuration * 1000);
             if (expiresAt <= new Date()) {
-                errors.slowmode_duration_block = "Time cannot be in the past.";
+                errors.slowmode_duration_block = 'Time cannot be in the past.';
             }
         }
         if (slowmodeTime < 1) {
-            errors.slowmode_time_block = "Invalid slowmode interval";
+            errors.slowmode_time_block = 'Invalid slowmode interval';
         }
 
         if (Object.keys(errors).length > 0) {
             return await ack({
-                response_action: "errors",
-                errors: errors
+                response_action: 'errors',
+                errors: errors,
             });
         }
 
         await ack();
 
-        const slowmode = await prisma.Slowmode.upsert({
+        const slowmode = await prisma.slowmode.upsert({
             where: {
                 channel_threadTs: {
                     channel: channel_id,
-                    threadTs: thread_ts
-                }
+                    threadTs: thread_ts,
+                },
             },
             create: {
                 channel: channel_id,
@@ -52,7 +59,7 @@ async function slowmode_thread_modal(args) {
                 expiresAt: expiresAt,
                 reason: reason,
                 admin: admin_id,
-                whitelistedUsers: whitelistedUsers
+                whitelistedUsers: whitelistedUsers,
             },
             update: {
                 locked: true,
@@ -61,74 +68,74 @@ async function slowmode_thread_modal(args) {
                 reason: reason,
                 admin: admin_id,
                 whitelistedUsers: whitelistedUsers,
-                updatedAt: new Date()
-            }
+                updatedAt: new Date(),
+            },
         });
 
         for (const userId of whitelistedUsers) {
-            await prisma.SlowUsers.upsert({
+            await prisma.slowUsers.upsert({
                 where: {
                     channel_threadTs_user: {
                         channel: channel_id,
                         threadTs: thread_ts,
-                        user: userId
-                    }
+                        user: userId,
+                    },
                 },
                 create: {
                     channel: channel_id,
                     threadTs: thread_ts,
                     user: userId,
                     whitelist: true,
-                    count: 0
+                    count: 0,
                 },
                 update: {
                     whitelist: true,
-                }
+                },
             });
         }
 
-        const allWhitelistedSlowUsers = await prisma.SlowUsers.findMany({
+        const allWhitelistedSlowUsers = await prisma.slowUsers.findMany({
             where: {
                 channel: channel_id,
                 threadTs: thread_ts,
-                whitelist: true
-            }
+                whitelist: true,
+            },
         });
 
         for (const slowUser of allWhitelistedSlowUsers) {
             if (!whitelistedUsers.includes(slowUser.user)) {
-                await prisma.SlowUsers.update({
+                await prisma.slowUsers.update({
                     where: {
                         channel_threadTs_user: {
                             channel: channel_id,
                             threadTs: thread_ts,
-                            user: slowUser.user
-                        }
+                            user: slowUser.user,
+                        },
                     },
                     data: {
-                        whitelist: false
-                    }
+                        whitelist: false,
+                    },
                 });
             }
         }
 
         const expiryText = expiresAt
-            ? `until ${expiresAt.toLocaleString('en-US', { timeZone: 'America/New_York', timeStyle: "short", dateStyle: "long" })} EST`
-            : "indefinitely"
+            ? `until ${expiresAt.toLocaleString('en-US', { timeZone: 'America/New_York', timeStyle: 'short', dateStyle: 'long' })} EST`
+            : 'indefinitely';
 
-        const reasonText = reason ? `${reason}` : "(none provided)";
+        const reasonText = reason ? `${reason}` : '(none provided)';
 
         await client.chat.postMessage({
-            channel: process.env.MIRRORCHANNEL,
-            text: `<@${admin_id}> enabled a ${slowmodeTime} second Slowmode in https://hackclub.slack.com/archives/${channel_id}/p${thread_ts.toString().replace(".", "")} for ${reasonText} ${expiryText}`
+            channel: env.MIRRORCHANNEL,
+            text: `<@${admin_id}> enabled a ${slowmodeTime} second Slowmode in https://hackclub.slack.com/archives/${channel_id}/p${thread_ts.toString().replace('.', '')} for ${reasonText} ${expiryText}`,
         });
 
         await client.chat.postMessage({
             channel: channel_id,
             thread_ts,
-            text: `A ${slowmodeTime} second Slowmode has been enabled in this thread ${expiryText}`
+            text: `A ${slowmodeTime} second Slowmode has been enabled in this thread ${expiryText}`,
         });
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 }
