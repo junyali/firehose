@@ -79,3 +79,11 @@ export async function removeReaction(
         // Reaction may not exist
     }
 }
+
+export async function getUserMessageCount(userId: string): Promise<number> {
+    const result = await userClient.search.messages({
+        query: `from:<@${userId}>`,
+        count: 1,
+    });
+    return result.messages?.total ?? 0;
+}
